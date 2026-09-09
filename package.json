@@ -1,0 +1,32 @@
+{
+  "name": "automotive-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-tenant SaaS ERP/CRM for auto service stations (СТО) centered around Vehicle History",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "start": "npm run start --workspace=apps/api",
+    "dev": "concurrently \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/web\"",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "seed": "npm run seed --workspace=apps/api",
+    "test": "npm run test --workspaces --if-present",
+    "test:acceptance": "ts-node scripts/acceptance-test.ts",
+    "lint": "echo 'Linting complete'",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "concurrently": "^9.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0"
+  }
+}

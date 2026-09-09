@@ -1,0 +1,292 @@
+import { SystemRole } from '@automotive-os/types';
+
+export const PERMISSIONS = {
+  // Customers
+  CUSTOMERS_READ: 'customers.read',
+  CUSTOMERS_CREATE: 'customers.create',
+  CUSTOMERS_UPDATE: 'customers.update',
+  CUSTOMERS_DELETE: 'customers.delete',
+
+  // Vehicles
+  VEHICLES_READ: 'vehicles.read',
+  VEHICLES_CREATE: 'vehicles.create',
+  VEHICLES_UPDATE: 'vehicles.update',
+  VEHICLES_DELETE: 'vehicles.delete',
+
+  // Inspections
+  INSPECTIONS_READ: 'inspections.read',
+  INSPECTIONS_CREATE: 'inspections.create',
+  INSPECTIONS_UPDATE: 'inspections.update',
+
+  // Media
+  MEDIA_READ: 'media.read',
+  MEDIA_UPLOAD: 'media.upload',
+  MEDIA_DELETE: 'media.delete',
+
+  // Work Orders
+  WORK_ORDERS_READ: 'work_orders.read',
+  WORK_ORDERS_CREATE: 'work_orders.create',
+  WORK_ORDERS_UPDATE: 'work_orders.update',
+  WORK_ORDERS_CLOSE: 'work_orders.close',
+  WORK_ORDER_ITEMS_READ: 'work_order_items.read',
+  WORK_ORDER_ITEMS_CREATE: 'work_order_items.create',
+  WORK_ORDER_ITEMS_UPDATE: 'work_order_items.update',
+  WORK_ORDER_ITEMS_DELETE: 'work_order_items.delete',
+
+  // Documents
+  DOCUMENTS_READ: 'documents.read',
+  DOCUMENTS_CREATE: 'documents.create',
+  DOCUMENTS_UPDATE: 'documents.update',
+  DOCUMENTS_DELETE: 'documents.delete',
+
+  // Tasks
+  TASKS_READ: 'tasks.read',
+  TASKS_CREATE: 'tasks.create',
+  TASKS_UPDATE: 'tasks.update',
+  TASKS_DELETE: 'tasks.delete',
+
+  // Reminders
+  REMINDERS_READ: 'reminders.read',
+  REMINDERS_CREATE: 'reminders.create',
+  REMINDERS_UPDATE: 'reminders.update',
+
+  // Reports
+  REPORTS_READ: 'reports.read',
+
+  // Users
+  USERS_READ: 'users.read',
+  USERS_CREATE: 'users.create',
+  USERS_UPDATE: 'users.update',
+  USERS_DELETE: 'users.delete',
+
+  // Roles
+  ROLES_READ: 'roles.read',
+  ROLES_UPDATE: 'roles.update',
+
+  // Organization & Locations
+  ORGANIZATION_READ: 'organization.read',
+  ORGANIZATION_UPDATE: 'organization.update',
+  ORGANIZATION_DELETE: 'organization.delete',
+  LOCATIONS_READ: 'locations.read',
+  LOCATIONS_CREATE: 'locations.create',
+  LOCATIONS_UPDATE: 'locations.update',
+  LOCATIONS_DELETE: 'locations.delete',
+
+  // Backups
+  BACKUP_CREATE: 'backup.create',
+  BACKUP_RESTORE: 'backup.restore',
+
+  // Audit
+  AUDIT_READ: 'audit.read',
+} as const;
+
+export const ROLE_PERMISSIONS: Record<SystemRole, string[]> = {
+  [SystemRole.OWNER]: ['*'],
+
+  [SystemRole.NETWORK_ADMIN]: [
+    'organization.read',
+    'organization.update',
+    'locations.read',
+    'locations.create',
+    'locations.update',
+    'locations.delete',
+    'users.read',
+    'users.create',
+    'users.update',
+    'users.delete',
+    'roles.read',
+    'roles.update',
+    'customers.*',
+    'customers.read',
+    'customers.create',
+    'customers.update',
+    'customers.delete',
+    'vehicles.*',
+    'vehicles.read',
+    'vehicles.create',
+    'vehicles.update',
+    'vehicles.delete',
+    'inspections.*',
+    'inspections.read',
+    'inspections.create',
+    'inspections.update',
+    'work_orders.*',
+    'work_orders.read',
+    'work_orders.create',
+    'work_orders.update',
+    'work_orders.close',
+    'work_order_items.read',
+    'work_order_items.create',
+    'work_order_items.update',
+    'work_order_items.delete',
+    'documents.*',
+    'documents.read',
+    'documents.create',
+    'documents.update',
+    'documents.delete',
+    'media.*',
+    'media.read',
+    'media.upload',
+    'media.delete',
+    'tasks.*',
+    'tasks.read',
+    'tasks.create',
+    'tasks.update',
+    'tasks.delete',
+    'reminders.*',
+    'reminders.read',
+    'reminders.create',
+    'reminders.update',
+    'reports.*',
+    'reports.read',
+    'backup.*',
+    'backup.create',
+    'backup.restore',
+    'audit.read',
+  ],
+
+  [SystemRole.BRANCH_MANAGER]: [
+    'customers.*',
+    'customers.read',
+    'customers.create',
+    'customers.update',
+    'customers.delete',
+    'vehicles.*',
+    'vehicles.read',
+    'vehicles.create',
+    'vehicles.update',
+    'vehicles.delete',
+    'inspections.*',
+    'inspections.read',
+    'inspections.create',
+    'inspections.update',
+    'work_orders.*',
+    'work_orders.read',
+    'work_orders.create',
+    'work_orders.update',
+    'work_orders.close',
+    'work_order_items.read',
+    'work_order_items.create',
+    'work_order_items.update',
+    'work_order_items.delete',
+    'documents.*',
+    'documents.read',
+    'documents.create',
+    'documents.update',
+    'documents.delete',
+    'media.*',
+    'media.read',
+    'media.upload',
+    'media.delete',
+    'tasks.*',
+    'tasks.read',
+    'tasks.create',
+    'tasks.update',
+    'tasks.delete',
+    'reminders.*',
+    'reminders.read',
+    'reminders.create',
+    'reminders.update',
+    'reports.read',
+    'users.read',
+    'backup.create',
+    'audit.read',
+  ],
+
+  [SystemRole.SERVICE_ADVISOR]: [
+    'customers.read',
+    'customers.create',
+    'customers.update',
+    'vehicles.read',
+    'vehicles.create',
+    'vehicles.update',
+    'inspections.read',
+    'inspections.create',
+    'inspections.update',
+    'media.read',
+    'media.upload',
+    'work_orders.read',
+    'work_orders.create',
+    'work_orders.update',
+    'work_order_items.read',
+    'work_order_items.create',
+    'work_order_items.update',
+    'documents.read',
+    'documents.create',
+    'tasks.read',
+    'tasks.create',
+    'tasks.update',
+    'reminders.read',
+    'reminders.create',
+    'reminders.update',
+  ],
+
+  [SystemRole.MASTER]: [
+    'vehicles.read',
+    'inspections.read',
+    'inspections.update',
+    'work_orders.read',
+    'work_orders.update',
+    'work_order_items.read',
+    'work_order_items.create',
+    'work_order_items.update',
+    'work_order_items.delete',
+    'media.read',
+    'media.upload',
+    'tasks.*',
+    'tasks.read',
+    'tasks.create',
+    'tasks.update',
+  ],
+
+  [SystemRole.MECHANIC]: [
+    'vehicles.read',
+    'work_orders.read',
+    'work_orders.update',
+    'work_order_items.read',
+    'work_order_items.update',
+    'media.read',
+    'media.upload',
+    'tasks.read',
+    'tasks.update',
+  ],
+
+  [SystemRole.DOCUMENT_MANAGER]: [
+    'customers.read',
+    'vehicles.read',
+    'work_orders.read',
+    'documents.read',
+    'documents.create',
+    'documents.update',
+    'documents.delete',
+    'media.read',
+  ],
+
+  [SystemRole.ACCOUNTANT]: [
+    'customers.read',
+    'vehicles.read',
+    'work_orders.read',
+    'documents.read',
+    'reports.read',
+  ],
+
+  [SystemRole.VIEWER]: [
+    'customers.read',
+    'vehicles.read',
+    'work_orders.read',
+    'documents.read',
+  ],
+};
+
+export function hasPermission(
+  userPermissions: string[],
+  requiredPermission: string,
+): boolean {
+  if (userPermissions.includes('*')) return true;
+  if (userPermissions.includes(requiredPermission)) return true;
+
+  const [domain] = requiredPermission.split('.');
+  if (userPermissions.includes(`${domain}.*`)) return true;
+
+  return false;
+}

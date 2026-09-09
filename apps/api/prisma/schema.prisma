@@ -1,0 +1,593 @@
+// AUTOMOTIVE OS Prisma Schema (Sections 8-30 of Technical Specification)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id         String   @id @default(uuid())
+  name       String
+  legal_name String?
+  tax_id     String?
+  phone      String?
+  email      String?
+  address    String?
+  logo_url   String?
+  timezone   String   @default("UTC+3")
+  currency   String   @default("RUB")
+  status     String   @default("active") // active, suspended, inactive
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  locations         Location[]
+  users             User[]
+  roles             Role[]
+  customers         Customer[]
+  vehicles          Vehicle[]
+  inspections       Inspection[]
+  work_orders       WorkOrder[]
+  documents         Document[]
+  document_templates DocumentTemplate[]
+  media             Media[]
+  tasks             Task[]
+  reminders         Reminder[]
+  notifications     Notification[]
+  audit_logs        AuditLog[]
+  backups           Backup[]
+  devices           Device[]
+  sync_events       SyncEvent[]
+
+  @@map("organizations")
+}
+
+model Location {
+  id              String   @id @default(uuid())
+  organization_id String
+  name            String
+  city            String?
+  address         String?
+  phone           String?
+  email           String?
+  timezone        String   @default("UTC+3")
+  status          String   @default("active") // active, inactive
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization       Organization       @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  users              User[]
+  inspections        Inspection[]
+  work_orders        WorkOrder[]
+  documents          Document[]
+  document_templates DocumentTemplate[]
+  media              Media[]
+  tasks              Task[]
+  reminders          Reminder[]
+  audit_logs         AuditLog[]
+
+  @@index([organization_id])
+  @@map("locations")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  organization_id String
+  location_id     String?
+  role_id         String
+  first_name      String
+  last_name       String
+  phone           String?
+  email           String
+  password_hash   String
+  avatar_url      String?
+  status          String    @default("active") // active, suspended, inactive
+  last_login_at   DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  organization         Organization     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  location             Location?        @relation(fields: [location_id], references: [id], onDelete: SetNull)
+  role                 Role             @relation(fields: [role_id], references: [id], onDelete: Restrict)
+  created_inspections  Inspection[]     @relation("InspectionCreator")
+  advised_work_orders  WorkOrder[]      @relation("WorkOrderAdvisor")
+  mastered_work_orders WorkOrder[]      @relation("WorkOrderMaster")
+  assigned_items       WorkOrderItem[]  @relation("WorkOrderItemAssignee")
+  uploaded_documents   Document[]       @relation("DocumentUploader")
+  uploaded_media       Media[]          @relation("MediaUploader")
+  assigned_tasks       Task[]           @relation("TaskAssignee")
+  created_tasks        Task[]           @relation("TaskCreator")
+  created_reminders    Reminder[]       @relation("ReminderCreator")
+  notifications        Notification[]
+  audit_logs           AuditLog[]
+  backups              Backup[]
+  devices              Device[]
+  sync_events          SyncEvent[]
+
+  @@index([organization_id])
+  @@index([email])
+  @@map("users")
+}
+
+model Role {
+  id              String   @id @default(uuid())
+  organization_id String?
+  name            String
+  description     String?
+  is_system       Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization     Organization?    @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  users            User[]
+  role_permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  description String?
+
+  role_permissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  role_id       String
+  permission_id String
+
+  role       Role       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@id([role_id, permission_id])
+  @@map("role_permissions")
+}
+
+model Customer {
+  id              String    @id @default(uuid())
+  organization_id String
+  first_name      String
+  last_name       String
+  phone           String
+  email           String?
+  address         String?
+  notes           String?
+  status          String    @default("active") // active, inactive
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  deleted_at      DateTime?
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  vehicles     Vehicle[]
+  inspections  Inspection[]
+  work_orders  WorkOrder[]
+  documents    Document[]
+  media        Media[]
+  tasks        Task[]
+  reminders    Reminder[]
+
+  @@index([organization_id])
+  @@index([phone])
+  @@index([email])
+  @@map("customers")
+}
+
+model Vehicle {
+  id              String    @id @default(uuid())
+  organization_id String
+  customer_id     String
+  vin             String
+  license_plate   String
+  make            String
+  model           String
+  generation      String?
+  year            Int
+  color           String?
+  body_type       String?
+  engine          String?
+  engine_volume   String?
+  transmission    String?
+  drive_type      String?
+  fuel_type       String?
+  mileage         Int       @default(0)
+  mileage_unit    String    @default("km")
+  notes           String?
+  status          String    @default("active") // active, in_service, inactive
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  deleted_at      DateTime?
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  inspections  Inspection[]
+  work_orders  WorkOrder[]
+  documents    Document[]
+  media        Media[]
+  tasks        Task[]
+  reminders    Reminder[]
+
+  @@unique([organization_id, vin])
+  @@index([organization_id])
+  @@index([license_plate])
+  @@index([customer_id])
+  @@map("vehicles")
+}
+
+model Inspection {
+  id               String    @id @default(uuid())
+  organization_id  String
+  location_id      String
+  vehicle_id       String
+  customer_id      String
+  created_by       String
+  mileage          Int
+  fuel_level       Int       @default(50) // percentage 0-100
+  status           String    @default("draft") // draft, in_progress, completed, cancelled
+  customer_comment String?
+  internal_comment String?
+  started_at       DateTime  @default(now())
+  completed_at     DateTime?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  organization Organization     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  location     Location         @relation(fields: [location_id], references: [id], onDelete: Restrict)
+  vehicle      Vehicle          @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
+  customer     Customer         @relation(fields: [customer_id], references: [id], onDelete: Restrict)
+  creator      User             @relation("InspectionCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  items        InspectionItem[]
+  media        Media[]
+  work_orders  WorkOrder[]
+
+  @@index([organization_id])
+  @@index([location_id])
+  @@index([vehicle_id])
+  @@map("inspections")
+}
+
+model InspectionItem {
+  id            String   @id @default(uuid())
+  inspection_id String
+  category      String   // body, interior, undercarriage, etc.
+  name          String
+  status        String   @default("not_checked") // ok, warning, damage, not_checked
+  comment       String?
+  sort_order    Int      @default(0)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  inspection Inspection @relation(fields: [inspection_id], references: [id], onDelete: Cascade)
+
+  @@index([inspection_id])
+  @@map("inspection_items")
+}
+
+model Media {
+  id              String    @id @default(uuid())
+  organization_id String
+  location_id     String
+  vehicle_id      String
+  customer_id     String?
+  inspection_id   String?
+  work_order_id   String?
+  uploaded_by     String
+  type            String    // photo, video, document_preview
+  storage_key     String
+  mime_type       String
+  file_name       String
+  file_size       Int
+  duration        Int?
+  checksum        String
+  status          String    @default("ready") // pending, ready, processing, failed
+  metadata        String?   // JSON formatted damage markers: [{x, y, severity, comment}]
+  retention_until DateTime?
+  legal_hold      Boolean   @default(false)
+  created_at      DateTime  @default(now())
+  archived_at     DateTime?
+  deleted_at      DateTime?
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [location_id], references: [id], onDelete: Restrict)
+  vehicle      Vehicle      @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
+  customer     Customer?    @relation(fields: [customer_id], references: [id], onDelete: SetNull)
+  inspection   Inspection?  @relation(fields: [inspection_id], references: [id], onDelete: SetNull)
+  work_order   WorkOrder?   @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
+  uploader     User         @relation("MediaUploader", fields: [uploaded_by], references: [id], onDelete: Restrict)
+
+  @@index([organization_id])
+  @@index([vehicle_id])
+  @@index([inspection_id])
+  @@index([work_order_id])
+  @@map("media")
+}
+
+model WorkOrder {
+  id                 String    @id @default(uuid())
+  organization_id    String
+  location_id        String
+  vehicle_id         String
+  customer_id        String
+  inspection_id      String?
+  advisor_id         String
+  master_id          String?
+  number             String
+  status             String    @default("draft") // draft, accepted, diagnostics, waiting_approval, approved, in_progress, waiting_parts, completed, ready, paid, closed, cancelled
+  customer_complaint String?
+  diagnosis          String?
+  mileage_in         Int
+  mileage_out        Int?
+  subtotal           Float     @default(0)
+  discount           Float     @default(0)
+  tax                Float     @default(0)
+  total              Float     @default(0)
+  opened_at          DateTime  @default(now())
+  completed_at       DateTime?
+  closed_at          DateTime?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  organization Organization    @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  location     Location        @relation(fields: [location_id], references: [id], onDelete: Restrict)
+  vehicle      Vehicle         @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
+  customer     Customer        @relation(fields: [customer_id], references: [id], onDelete: Restrict)
+  inspection   Inspection?     @relation(fields: [inspection_id], references: [id], onDelete: SetNull)
+  advisor      User            @relation("WorkOrderAdvisor", fields: [advisor_id], references: [id], onDelete: Restrict)
+  master       User?           @relation("WorkOrderMaster", fields: [master_id], references: [id], onDelete: SetNull)
+  items        WorkOrderItem[]
+  documents    Document[]
+  media        Media[]
+  tasks        Task[]
+
+  @@unique([organization_id, number])
+  @@index([organization_id])
+  @@index([location_id])
+  @@index([vehicle_id])
+  @@index([status])
+  @@map("work_orders")
+}
+
+model WorkOrderItem {
+  id            String   @id @default(uuid())
+  work_order_id String
+  type          String   // labor, part, other
+  description   String
+  quantity      Float    @default(1)
+  unit_price    Float    @default(0)
+  cost_price    Float?
+  total_price   Float    @default(0)
+  assigned_to   String?
+  status        String   @default("pending") // pending, in_progress, completed, cancelled
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  work_order WorkOrder @relation(fields: [work_order_id], references: [id], onDelete: Cascade)
+  assignee   User?     @relation("WorkOrderItemAssignee", fields: [assigned_to], references: [id], onDelete: SetNull)
+
+  @@index([work_order_id])
+  @@map("work_order_items")
+}
+
+model Document {
+  id              String    @id @default(uuid())
+  organization_id String
+  location_id     String
+  customer_id     String
+  vehicle_id      String
+  work_order_id   String?
+  uploaded_by     String
+  type            String    // contract, work_order, acceptance_act, completion_act, invoice, warranty, other
+  name            String
+  storage_key     String
+  mime_type       String
+  file_size       Int
+  checksum        String
+  is_signed       Boolean   @default(false)
+  signed_at       DateTime?
+  content_html    String?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  deleted_at      DateTime?
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [location_id], references: [id], onDelete: Restrict)
+  customer     Customer     @relation(fields: [customer_id], references: [id], onDelete: Restrict)
+  vehicle      Vehicle      @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
+  work_order   WorkOrder?   @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
+  uploader     User         @relation("DocumentUploader", fields: [uploaded_by], references: [id], onDelete: Restrict)
+
+  @@index([organization_id])
+  @@index([vehicle_id])
+  @@index([work_order_id])
+  @@map("documents")
+}
+
+model DocumentTemplate {
+  id               String   @id @default(uuid())
+  organization_id  String
+  location_id      String?
+  name             String
+  type             String   // contract, work_order, acceptance_act, completion_act, invoice, etc.
+  template_content String
+  version          Int      @default(1)
+  is_active        Boolean  @default(true)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [location_id], references: [id], onDelete: SetNull)
+
+  @@index([organization_id])
+  @@map("document_templates")
+}
+
+model Task {
+  id              String    @id @default(uuid())
+  organization_id String
+  location_id     String
+  vehicle_id      String?
+  customer_id     String?
+  work_order_id   String?
+  assigned_to     String
+  created_by      String
+  title           String
+  description     String?
+  priority        String    @default("normal") // low, normal, high, critical
+  status          String    @default("new") // new, in_progress, completed, cancelled
+  due_at          DateTime?
+  completed_at    DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [location_id], references: [id], onDelete: Restrict)
+  vehicle      Vehicle?     @relation(fields: [vehicle_id], references: [id], onDelete: SetNull)
+  customer     Customer?    @relation(fields: [customer_id], references: [id], onDelete: SetNull)
+  work_order   WorkOrder?   @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
+  assignee     User         @relation("TaskAssignee", fields: [assigned_to], references: [id], onDelete: Restrict)
+  creator      User         @relation("TaskCreator", fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([organization_id])
+  @@index([location_id])
+  @@index([assigned_to])
+  @@map("tasks")
+}
+
+model Reminder {
+  id              String   @id @default(uuid())
+  organization_id String
+  location_id     String
+  vehicle_id      String
+  customer_id     String
+  created_by      String
+  type            String   // date, mileage, date_or_mileage
+  title           String
+  description     String?
+  target_date     DateTime?
+  target_mileage  Int?
+  status          String   @default("active") // active, due, completed, cancelled
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [location_id], references: [id], onDelete: Restrict)
+  vehicle      Vehicle      @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customer_id], references: [id], onDelete: Restrict)
+  creator      User         @relation("ReminderCreator", fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([organization_id])
+  @@index([vehicle_id])
+  @@map("reminders")
+}
+
+model Notification {
+  id              String    @id @default(uuid())
+  organization_id String
+  user_id         String
+  type            String
+  title           String
+  body            String
+  entity_type     String?
+  entity_id       String?
+  is_read         Boolean   @default(false)
+  created_at      DateTime  @default(now())
+  read_at         DateTime?
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id])
+  @@index([user_id])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id              String   @id @default(uuid())
+  organization_id String
+  location_id     String?
+  user_id         String
+  action          String   // create, update, delete, login, export, restore
+  entity_type     String
+  entity_id       String
+  old_values      String?  // JSON string
+  new_values      String?  // JSON string
+  ip_address      String?
+  user_agent      String?
+  created_at      DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [location_id], references: [id], onDelete: SetNull)
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id])
+  @@index([entity_type])
+  @@index([created_at])
+  @@map("audit_logs")
+}
+
+model Backup {
+  id              String    @id @default(uuid())
+  organization_id String
+  created_by      String
+  type            String    // cloud, local, manual, scheduled
+  status          String    @default("pending") // pending, processing, completed, failed
+  storage_key     String?
+  size            Int       @default(0)
+  checksum        String?
+  started_at      DateTime  @default(now())
+  completed_at    DateTime?
+  created_at      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  creator      User         @relation(fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([organization_id])
+  @@map("backups")
+}
+
+model Device {
+  id              String   @id @default(uuid())
+  user_id         String
+  organization_id String
+  platform        String   // android, ios, web
+  device_name     String
+  app_version     String
+  last_sync_at    DateTime @default(now())
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  sync_events  SyncEvent[]
+
+  @@index([organization_id])
+  @@index([user_id])
+  @@map("devices")
+}
+
+model SyncEvent {
+  id              String    @id @default(uuid())
+  device_id       String
+  user_id         String
+  organization_id String
+  event_type      String
+  entity_type     String
+  entity_id       String
+  payload         String    // JSON string
+  status          String    @default("pending") // pending, processing, synced, failed, conflict
+  created_at      DateTime  @default(now())
+  processed_at    DateTime?
+
+  device       Device       @relation(fields: [device_id], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([device_id])
+  @@index([status])
+  @@map("sync_events")
+}
