@@ -109,11 +109,12 @@ let BackupsService = class BackupsService {
         const org = this.db.get('SELECT * FROM organizations WHERE id = ?', [orgId]);
         const locations = this.db.all('SELECT * FROM locations WHERE organization_id = ?', [orgId]);
         const users = this.db.all('SELECT * FROM users WHERE organization_id = ?', [orgId]);
-        const roles = this.db.all('SELECT * FROM roles WHERE organization_id = ? OR organization_id IS NULL', [orgId]);
         const customers = this.db.all('SELECT * FROM customers WHERE organization_id = ?', [orgId]);
         const vehicles = this.db.all('SELECT * FROM vehicles WHERE organization_id = ?', [orgId]);
         const inspections = this.db.all('SELECT * FROM inspections WHERE organization_id = ?', [orgId]);
+        const inspectionItems = this.db.all('SELECT ii.* FROM inspection_items ii JOIN inspections i ON ii.inspection_id = i.id WHERE i.organization_id = ?', [orgId]);
         const workOrders = this.db.all('SELECT * FROM work_orders WHERE organization_id = ?', [orgId]);
+        const workOrderItems = this.db.all('SELECT wi.* FROM work_order_items wi JOIN work_orders w ON wi.work_order_id = w.id WHERE w.organization_id = ?', [orgId]);
         const documents = this.db.all('SELECT * FROM documents WHERE organization_id = ?', [orgId]);
         const media = this.db.all('SELECT * FROM media WHERE organization_id = ?', [orgId]);
         const tasks = this.db.all('SELECT * FROM tasks WHERE organization_id = ?', [orgId]);
@@ -132,7 +133,9 @@ let BackupsService = class BackupsService {
                     customers: customers.length,
                     vehicles: vehicles.length,
                     inspections: inspections.length,
+                    inspection_items: inspectionItems.length,
                     work_orders: workOrders.length,
+                    work_order_items: workOrderItems.length,
                     documents: documents.length,
                     media: media.length,
                     tasks: tasks.length,
@@ -143,11 +146,12 @@ let BackupsService = class BackupsService {
                 organization: org,
                 locations,
                 users,
-                roles,
                 customers,
                 vehicles,
                 inspections,
+                inspection_items: inspectionItems,
                 work_orders: workOrders,
+                work_order_items: workOrderItems,
                 documents,
                 media,
                 tasks,
@@ -187,6 +191,54 @@ let BackupsService = class BackupsService {
             });
         }
         const parsed = JSON.parse(content);
+        const data = parsed.data || {};
+        // Execute full transactional restore
+        this.db.exec('PRAGMA foreign_keys = OFF');
+        try {
+            this.db.transaction(() => {
+                // 1. Clean current organization tables (in foreign key safety order)
+                this.db.run('DELETE FROM reminders WHERE organization_id = ?', [orgId]);
+                this.db.run('DELETE FROM tasks WHERE organization_id = ?', [orgId]);
+                this.db.run('DELETE FROM documents WHERE organization_id = ?', [orgId]);
+                this.db.run('DELETE FROM media WHERE organization_id = ?', [orgId]);
+                this.db.run('DELETE FROM work_order_items WHERE work_order_id IN (SELECT id FROM work_orders WHERE organization_id = ?)', [orgId]);
+                this.db.run('DELETE FROM work_orders WHERE organization_id = ?', [orgId]);
+                this.db.run('DELETE FROM inspection_items WHERE inspection_id IN (SELECT id FROM inspections WHERE organization_id = ?)', [orgId]);
+                this.db.run('DELETE FROM inspections WHERE organization_id = ?', [orgId]);
+                this.db.run('DELETE FROM vehicles WHERE organization_id = ?', [orgId]);
+                this.db.run('DELETE FROM customers WHERE organization_id = ?', [orgId]);
+                // 2. Insert helper
+                const insertRows = (tableName, rows) => {
+                    if (!Array.isArray(rows) || rows.length === 0)
+                        return;
+                    for (const row of rows) {
+                        const keys = Object.keys(row);
+                        const placeholders = keys.map(() => '?').join(', ');
+                        const values = keys.map((k) => row[k]);
+                        const sql = `INSERT OR REPLACE INTO ${tableName} (${keys.join(', ')}) VALUES (${placeholders})`;
+                        this.db.run(sql, values);
+                    }
+                };
+                if (data.organization) {
+                    insertRows('organizations', [data.organization]);
+                }
+                insertRows('locations', data.locations);
+                insertRows('users', data.users);
+                insertRows('customers', data.customers);
+                insertRows('vehicles', data.vehicles);
+                insertRows('inspections', data.inspections);
+                insertRows('inspection_items', data.inspection_items);
+                insertRows('work_orders', data.work_orders);
+                insertRows('work_order_items', data.work_order_items);
+                insertRows('documents', data.documents);
+                insertRows('media', data.media);
+                insertRows('tasks', data.tasks);
+                insertRows('reminders', data.reminders);
+            });
+        }
+        finally {
+            this.db.exec('PRAGMA foreign_keys = ON');
+        }
         return {
             success: true,
             message: `Organization restored successfully from backup ${backupId}`,

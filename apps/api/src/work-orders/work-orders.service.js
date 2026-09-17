@@ -200,11 +200,7 @@ let WorkOrdersService = class WorkOrdersService {
     create(orgId, advisorId, userLocationId, data) {
         const id = (0, uuid_1.v4)();
         const now = new Date().toISOString();
-        let locationId = data.location_id || userLocationId;
-        if (!locationId) {
-            const defaultLoc = this.db.get('SELECT id FROM locations WHERE organization_id = ? ORDER BY created_at ASC LIMIT 1', [orgId]);
-            locationId = defaultLoc?.id;
-        }
+        const locationId = data.location_id || userLocationId;
         if (!locationId) {
             throw new common_1.BadRequestException({
                 code: 'LOCATION_REQUIRED',

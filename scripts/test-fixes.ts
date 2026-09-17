@@ -1,3 +1,7 @@
+import * as path from 'path';
+if (!process.env.DATABASE_FILE) {
+  process.env.DATABASE_FILE = path.resolve(__dirname, '../apps/api/data/automotive.db');
+}
 import { BackupsService } from '../apps/api/src/backups/backups.service';
 import { DatabaseService } from '../apps/api/src/database/database.service';
 import { TasksService } from '../apps/api/src/tasks/tasks.service';

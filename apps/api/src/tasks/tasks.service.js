@@ -57,7 +57,7 @@ let TasksService = class TasksService {
             sql += ' AND t.vehicle_id = ?';
             params.push(query.vehicle_id);
         }
-        sql += ' ORDER BY CASE t.priority WHEN "critical" THEN 1 WHEN "high" THEN 2 WHEN "normal" THEN 3 ELSE 4 END, t.created_at DESC';
+        sql += " ORDER BY CASE t.priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'normal' THEN 3 ELSE 4 END, t.created_at DESC";
         const rows = this.db.all(sql, params);
         return rows.map((t) => ({
             ...t,

@@ -14,4 +14,5 @@ export declare class DatabaseService implements OnModuleInit, OnModuleDestroy {
         lastInsertRowid: number | bigint;
     };
     transaction<T>(fn: () => T): T;
+    exec(sql: string): any;
 }

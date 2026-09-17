@@ -1,10 +1,10 @@
-import { ApiResponse, Customer, Vehicle, VehicleHistoryItem, Inspection, WorkOrder, Document, Task, Reminder, Notification, AuditLog, Backup, User, Location, Organization, GlobalSearchResult, DashboardReport } from '@automotive-os/types';
+import { ApiResponse, Customer, Vehicle, VehicleHistoryItem, Inspection, WorkOrder, Document, Task, Reminder, Notification, AuditLog, Backup, User, Role, Location, Organization, GlobalSearchResult, DashboardReport } from '@automotive-os/types';
 export declare class AutomotiveApiClient {
     private baseUrl;
     private token;
     constructor(baseUrl?: string);
     setToken(token: string | null): void;
-    private request;
+    request<T>(path: string, options?: RequestInit): Promise<ApiResponse<T>>;
     login(email: string, password: string): Promise<ApiResponse<{
         accessToken: string;
         refreshToken: string;
@@ -60,12 +60,15 @@ export declare class AutomotiveApiClient {
         limit?: number;
         status?: string;
         vehicle_id?: string;
+        assigned_to?: string;
+        master_id?: string;
+        search?: string;
     }): Promise<ApiResponse<WorkOrder[]>>;
     getWorkOrder(id: string): Promise<ApiResponse<WorkOrder>>;
     createWorkOrder(data: any): Promise<ApiResponse<WorkOrder>>;
     updateWorkOrder(id: string, data: any): Promise<ApiResponse<WorkOrder>>;
     approveWorkOrder(id: string): Promise<ApiResponse<WorkOrder>>;
-    startWorkOrder(id: string): Promise<ApiResponse<WorkOrder>>;
+    startWorkOrder(id: string, master_id?: string): Promise<ApiResponse<WorkOrder>>;
     completeWorkOrder(id: string): Promise<ApiResponse<WorkOrder>>;
     closeWorkOrder(id: string): Promise<ApiResponse<WorkOrder>>;
     addWorkOrderItem(workOrderId: string, item: any): Promise<ApiResponse<any>>;
@@ -91,6 +94,9 @@ export declare class AutomotiveApiClient {
         vehicle_id?: string;
     }): Promise<ApiResponse<Reminder[]>>;
     createReminder(data: any): Promise<ApiResponse<Reminder>>;
+    completeReminder(id: string): Promise<ApiResponse<Reminder>>;
+    getUsers(location_id?: string): Promise<ApiResponse<User[]>>;
+    getRoles(): Promise<ApiResponse<Role[]>>;
     getNotifications(): Promise<ApiResponse<Notification[]>>;
     markNotificationRead(id: string): Promise<ApiResponse<Notification>>;
     markAllNotificationsRead(): Promise<ApiResponse<{

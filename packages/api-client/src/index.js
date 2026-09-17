@@ -172,8 +172,11 @@ class AutomotiveApiClient {
     async approveWorkOrder(id) {
         return this.request(`/work-orders/${id}/approve`, { method: 'POST' });
     }
-    async startWorkOrder(id) {
-        return this.request(`/work-orders/${id}/start`, { method: 'POST' });
+    async startWorkOrder(id, master_id) {
+        return this.request(`/work-orders/${id}/start`, {
+            method: 'POST',
+            body: master_id ? JSON.stringify({ master_id }) : undefined,
+        });
     }
     async completeWorkOrder(id) {
         return this.request(`/work-orders/${id}/complete`, { method: 'POST' });
@@ -215,6 +218,17 @@ class AutomotiveApiClient {
     }
     async createReminder(data) {
         return this.request('/reminders', { method: 'POST', body: JSON.stringify(data) });
+    }
+    async completeReminder(id) {
+        return this.request(`/reminders/${id}/complete`, { method: 'POST' });
+    }
+    // Users & Roles
+    async getUsers(location_id) {
+        const query = location_id ? `?location_id=${location_id}` : '';
+        return this.request(`/users${query}`);
+    }
+    async getRoles() {
+        return this.request('/roles');
     }
     // Notifications
     async getNotifications() {

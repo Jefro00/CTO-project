@@ -55,11 +55,14 @@ let DatabaseService = DatabaseService_1 = class DatabaseService {
     db;
     dbPath;
     constructor() {
-        const dataDir = path.resolve(process.cwd(), 'data');
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir, { recursive: true });
+        const isInsideAppsApi = process.cwd().endsWith('apps/api');
+        const defaultDataDir = isInsideAppsApi
+            ? path.resolve(process.cwd(), 'data')
+            : path.resolve(process.cwd(), 'apps/api/data');
+        if (!fs.existsSync(defaultDataDir)) {
+            fs.mkdirSync(defaultDataDir, { recursive: true });
         }
-        this.dbPath = process.env.DATABASE_FILE || path.join(dataDir, 'automotive.db');
+        this.dbPath = process.env.DATABASE_FILE || path.join(defaultDataDir, 'automotive.db');
     }
     onModuleInit() {
         this.initDb();
@@ -542,6 +545,10 @@ let DatabaseService = DatabaseService_1 = class DatabaseService {
             this.db.exec('ROLLBACK');
             throw err;
         }
+    }
+    // Execute raw script
+    exec(sql) {
+        return this.db.exec(sql);
     }
 };
 exports.DatabaseService = DatabaseService;

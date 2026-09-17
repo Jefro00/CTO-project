@@ -156,6 +156,9 @@ export interface User {
     created_at: string;
     updated_at: string;
     role?: Role;
+    role_name?: string;
+    permissions?: string[];
+    location_scope?: string;
     location?: Location | null;
     organization?: Organization;
 }
