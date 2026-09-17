@@ -37,14 +37,21 @@ export default function TasksPage() {
   const loadTasks = async () => {
     setIsLoading(true);
     try {
-      const [tRes, uRes] = await Promise.all([
-        api.getTasks(),
-        api.request<UserType[]>('/users'),
-      ]);
+      const tRes = await api.getTasks();
       setTasks(tRes.data || []);
-      setUsers(uRes.data || []);
-      if (uRes.data && uRes.data.length > 0 && !newTask.assigned_to) {
-        setNewTask((prev) => ({ ...prev, assigned_to: uRes.data[0].id }));
+
+      try {
+        const uRes = await api.getUsers();
+        setUsers(uRes.data || []);
+        if (uRes.data && uRes.data.length > 0 && !newTask.assigned_to) {
+          setNewTask((prev) => ({ ...prev, assigned_to: uRes.data[0].id }));
+        }
+      } catch {
+        // Fallback for roles without users.read
+        if (user) {
+          setUsers([user]);
+          setNewTask((prev) => ({ ...prev, assigned_to: user.id }));
+        }
       }
     } catch (err) {
       console.error('Error fetching tasks:', err);

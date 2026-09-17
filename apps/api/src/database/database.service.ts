@@ -14,11 +14,14 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private dbPath: string;
 
   constructor() {
-    const dataDir = path.resolve(process.cwd(), 'data');
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
+    const isInsideAppsApi = process.cwd().endsWith('apps/api');
+    const defaultDataDir = isInsideAppsApi
+      ? path.resolve(process.cwd(), 'data')
+      : path.resolve(process.cwd(), 'apps/api/data');
+    if (!fs.existsSync(defaultDataDir)) {
+      fs.mkdirSync(defaultDataDir, { recursive: true });
     }
-    this.dbPath = process.env.DATABASE_FILE || path.join(dataDir, 'automotive.db');
+    this.dbPath = process.env.DATABASE_FILE || path.join(defaultDataDir, 'automotive.db');
   }
 
   onModuleInit() {
@@ -508,5 +511,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       this.db.exec('ROLLBACK');
       throw err;
     }
+  }
+
+  // Execute raw script
+  exec(sql: string) {
+    return this.db.exec(sql);
   }
 }

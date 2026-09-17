@@ -26,6 +26,7 @@ import {
   Shield,
   Gauge,
   Fuel,
+  ClipboardCheck,
 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';

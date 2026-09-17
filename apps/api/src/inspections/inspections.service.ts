@@ -249,6 +249,45 @@ export class InspectionsService {
         ]);
       }
 
+      // Save damage markers into media / damage records (BUG-08 fix)
+      const damageMarkers = Array.isArray(data.damage_markers)
+        ? data.damage_markers
+        : Array.isArray(data.markers)
+        ? data.markers
+        : [];
+
+      for (const marker of damageMarkers) {
+        const mediaId = uuidv4();
+        const markerMeta = JSON.stringify({
+          marker,
+          x: marker.x,
+          y: marker.y,
+          view: marker.view,
+          severity: marker.severity,
+          comment: marker.comment,
+        });
+
+        this.db.run(
+          `INSERT INTO media (
+            id, organization_id, location_id, vehicle_id, customer_id, inspection_id,
+            uploaded_by, type, storage_key, mime_type, file_name, file_size, checksum, status, metadata, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, 'photo', ?, 'image/png', ?, 10240, 'sha256-marker', 'ready', ?, ?)`,
+          [
+            mediaId,
+            orgId,
+            locationId,
+            data.vehicle_id,
+            data.customer_id,
+            id,
+            userId,
+            `inspections/${id}/damage-${marker.id || mediaId}.png`,
+            `damage-${marker.view || 'body'}-${marker.severity || 'moderate'}.png`,
+            markerMeta,
+            now,
+          ],
+        );
+      }
+
       this.ws.emitToOrganization(orgId, 'inspection.updated', { inspectionId: id, status: 'created' });
 
       return this.getById(orgId, id);

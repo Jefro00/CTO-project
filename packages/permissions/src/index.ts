@@ -208,6 +208,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, string[]> = {
     'work_orders.read',
     'work_orders.create',
     'work_orders.update',
+    'work_orders.close',
     'work_order_items.read',
     'work_order_items.create',
     'work_order_items.update',
@@ -219,6 +220,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, string[]> = {
     'reminders.read',
     'reminders.create',
     'reminders.update',
+    'users.read',
   ],
 
   [SystemRole.MASTER]: [
@@ -227,6 +229,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, string[]> = {
     'inspections.update',
     'work_orders.read',
     'work_orders.update',
+    'work_orders.close',
     'work_order_items.read',
     'work_order_items.create',
     'work_order_items.update',
@@ -237,6 +240,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, string[]> = {
     'tasks.read',
     'tasks.create',
     'tasks.update',
+    'users.read',
   ],
 
   [SystemRole.MECHANIC]: [
@@ -255,6 +259,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, string[]> = {
     'customers.read',
     'vehicles.read',
     'work_orders.read',
+    'work_orders.close',
     'documents.read',
     'documents.create',
     'documents.update',

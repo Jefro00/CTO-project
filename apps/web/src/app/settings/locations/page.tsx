@@ -12,6 +12,7 @@ import {
   Building2,
   FileArchive,
   Download,
+  AlertCircle,
 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -21,7 +22,7 @@ import { Input } from '../../../components/ui/Input';
 import { Location, Backup } from '@automotive-os/types';
 
 export default function LocationsAndBackupsSettingsPage() {
-  const { api, organization } = useAuthStore();
+  const { api, organization, can } = useAuthStore();
   const [locations, setLocations] = useState<Location[]>([]);
   const [backups, setBackups] = useState<Backup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,11 +44,15 @@ export default function LocationsAndBackupsSettingsPage() {
   const [isBackingUp, setIsBackingUp] = useState(false);
 
   const loadData = async () => {
+    if (!can('locations.read')) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const [lRes, bRes] = await Promise.all([
         api.getLocations(),
-        api.getBackups().catch(() => ({ data: [] })),
+        can('backup.create') || can('backup.*') ? api.getBackups().catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
       ]);
       setLocations(lRes.data || []);
       setBackups(bRes.data || []);
@@ -60,7 +65,7 @@ export default function LocationsAndBackupsSettingsPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [can]);
 
   const handleCreateLocation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +96,7 @@ export default function LocationsAndBackupsSettingsPage() {
     e.preventDefault();
     try {
       const res = await api.restoreBackup(selectedBackupId, restoreToken);
-      alert(res.message || 'Организация успешно восстановлена из бэкапа!');
+      alert(res.data?.message || (res as any).message || 'Организация успешно восстановлена из бэкапа!');
       setIsRestoreModalOpen(false);
       setRestoreToken('');
       loadData();
@@ -99,6 +104,18 @@ export default function LocationsAndBackupsSettingsPage() {
       alert(err.message || 'Ошибка восстановления бэкапа');
     }
   };
+
+  if (!can('locations.read')) {
+    return (
+      <Card className="text-center py-16">
+        <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+        <h3 className="text-base font-bold text-slate-800">Доступ ограничен</h3>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+          Для просмотра и управления филиалами требуются соответствующие права (locations.read).
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -113,10 +130,12 @@ export default function LocationsAndBackupsSettingsPage() {
               Управление сетью автосервисов и филиальной изоляцией (Section 34 & 9)
             </p>
           </div>
-          <Button variant="primary" size="md" onClick={() => setIsLocModalOpen(true)}>
-            <Plus className="w-4 h-4" />
-            <span>Добавить филиал</span>
-          </Button>
+          {can('locations.create') && (
+            <Button variant="primary" size="md" onClick={() => setIsLocModalOpen(true)}>
+              <Plus className="w-4 h-4" />
+              <span>Добавить филиал</span>
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -146,72 +165,74 @@ export default function LocationsAndBackupsSettingsPage() {
       </div>
 
       {/* Backups & Restore Section (Section 52 & 77-79) */}
-      <div className="space-y-4 pt-6 border-t border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <HardDriveDownload className="w-6 h-6 text-indigo-600" /> Резервные копии и архивация (.aosbackup)
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Полный снимок базы данных, настроек и манифеста организации (Section 77-79)
-            </p>
+      {(can('backup.create') || can('backup.*')) && (
+        <div className="space-y-4 pt-6 border-t border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                <HardDriveDownload className="w-6 h-6 text-indigo-600" /> Резервные копии и архивация (.aosbackup)
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Полный снимок базы данных, настроек и манифеста организации (Section 77-79)
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="md"
+              isLoading={isBackingUp}
+              onClick={handleCreateBackup}
+              className="font-bold"
+            >
+              <FileArchive className="w-4 h-4 mr-1" />
+              <span>Создать бэкап организации</span>
+            </Button>
           </div>
-          <Button
-            variant="secondary"
-            size="md"
-            isLoading={isBackingUp}
-            onClick={handleCreateBackup}
-            className="font-bold"
-          >
-            <FileArchive className="w-4 h-4 mr-1" />
-            <span>Создать бэкап организации</span>
-          </Button>
-        </div>
 
-        {backups.length === 0 ? (
-          <Card className="text-center py-8 text-xs text-slate-400">
-            Резервные копии еще не создавались
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {backups.map((b) => (
-              <Card key={b.id} className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FileArchive className="w-6 h-6 text-indigo-600 shrink-0" />
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900">
-                      Резервный пакет: {b.storage_key ? b.storage_key.split('/').pop() : 'automotive-backup.aosbackup'}
-                    </h4>
-                    <p className="text-xs text-slate-500 font-mono">
-                      Размер: {(b.size / 1024).toFixed(1)} KB • Контрольная сумма SHA-256: {b.checksum?.slice(0, 16)}...
-                    </p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Создано: {new Date(b.created_at).toLocaleString('ru-RU')}
-                    </p>
+          {backups.length === 0 ? (
+            <Card className="text-center py-8 text-xs text-slate-400">
+              Резервные копии еще не создавались
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {backups.map((b) => (
+                <Card key={b.id} className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileArchive className="w-6 h-6 text-indigo-600 shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        Резервный пакет: {b.storage_key ? b.storage_key.split('/').pop() : 'automotive-backup.aosbackup'}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-mono">
+                        Размер: {(b.size / 1024).toFixed(1)} KB • Контрольная сумма SHA-256: {b.checksum?.slice(0, 16)}...
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Создано: {new Date(b.created_at).toLocaleString('ru-RU')}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <Badge variant="emerald" size="sm">
-                    {b.status}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedBackupId(b.id);
-                      setIsRestoreModalOpen(true);
-                    }}
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                    Восстановить
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="emerald" size="sm">
+                      {b.status}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedBackupId(b.id);
+                        setIsRestoreModalOpen(true);
+                      }}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                      Восстановить
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Location Modal */}
       <Modal

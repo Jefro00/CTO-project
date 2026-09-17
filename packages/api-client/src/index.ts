@@ -31,7 +31,7 @@ export class AutomotiveApiClient {
     this.token = token;
   }
 
-  private async request<T>(
+  public async request<T>(
     path: string,
     options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
@@ -209,7 +209,15 @@ export class AutomotiveApiClient {
   }
 
   // Work Orders
-  async getWorkOrders(query?: { page?: number; limit?: number; status?: string; vehicle_id?: string }) {
+  async getWorkOrders(query?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    vehicle_id?: string;
+    assigned_to?: string;
+    master_id?: string;
+    search?: string;
+  }) {
     const params = new URLSearchParams(query as any).toString();
     return this.request<WorkOrder[]>(`/work-orders${params ? `?${params}` : ''}`);
   }
@@ -236,8 +244,11 @@ export class AutomotiveApiClient {
     return this.request<WorkOrder>(`/work-orders/${id}/approve`, { method: 'POST' });
   }
 
-  async startWorkOrder(id: string) {
-    return this.request<WorkOrder>(`/work-orders/${id}/start`, { method: 'POST' });
+  async startWorkOrder(id: string, master_id?: string) {
+    return this.request<WorkOrder>(`/work-orders/${id}/start`, {
+      method: 'POST',
+      body: master_id ? JSON.stringify({ master_id }) : undefined,
+    });
   }
 
   async completeWorkOrder(id: string) {
@@ -296,6 +307,20 @@ export class AutomotiveApiClient {
 
   async createReminder(data: any) {
     return this.request<Reminder>('/reminders', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async completeReminder(id: string) {
+    return this.request<Reminder>(`/reminders/${id}/complete`, { method: 'POST' });
+  }
+
+  // Users & Roles
+  async getUsers(location_id?: string) {
+    const query = location_id ? `?location_id=${location_id}` : '';
+    return this.request<User[]>(`/users${query}`);
+  }
+
+  async getRoles() {
+    return this.request<Role[]>('/roles');
   }
 
   // Notifications

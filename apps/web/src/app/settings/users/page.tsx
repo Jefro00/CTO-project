@@ -10,6 +10,7 @@ import {
   MapPin,
   Trash2,
   CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -20,7 +21,7 @@ import { Select } from '../../../components/ui/Select';
 import { User as UserType, Role, Location } from '@automotive-os/types';
 
 export default function UsersSettingsPage() {
-  const { api, user } = useAuthStore();
+  const { api, user, can } = useAuthStore();
   const [users, setUsers] = useState<UserType[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -37,12 +38,16 @@ export default function UsersSettingsPage() {
   });
 
   const loadData = async () => {
+    if (!can('users.read')) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const [uRes, rRes, lRes] = await Promise.all([
-        api.request<UserType[]>('/users'),
-        api.request<Role[]>('/roles'),
-        api.getLocations(),
+        api.getUsers(),
+        api.getRoles(),
+        can('locations.read') ? api.getLocations() : Promise.resolve({ data: [] }),
       ]);
       setUsers(uRes.data || []);
       setRoles(rRes.data || []);
@@ -59,7 +64,7 @@ export default function UsersSettingsPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +83,18 @@ export default function UsersSettingsPage() {
     }
   };
 
+  if (!can('users.read')) {
+    return (
+      <Card className="text-center py-16">
+        <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+        <h3 className="text-base font-bold text-slate-800">Доступ ограничен</h3>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+          Для просмотра и управления списком сотрудников требуются права администратора (users.read).
+        </p>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -89,15 +106,17 @@ export default function UsersSettingsPage() {
             Список учетных записей, привязка к филиалам и назначение ролей (Section 35 & 10)
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="md"
-          className="font-bold shadow-md shadow-indigo-600/20"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <Plus className="w-4 h-4" />
-          <span>Добавить сотрудника</span>
-        </Button>
+        {can('users.create') && (
+          <Button
+            variant="primary"
+            size="md"
+            className="font-bold shadow-md shadow-indigo-600/20"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+            <span>Добавить сотрудника</span>
+          </Button>
+        )}
       </div>
 
       {isLoading ? (

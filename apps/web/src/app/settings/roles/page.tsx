@@ -2,22 +2,26 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../../stores/auth.store';
-import { Settings, Shield, Check, X } from 'lucide-react';
+import { Settings, Shield, Check, X, AlertCircle } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { Role } from '@automotive-os/types';
 
 export default function RolesSettingsPage() {
-  const { api } = useAuthStore();
+  const { api, can } = useAuthStore();
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!can('roles.read')) {
+      setIsLoading(false);
+      return;
+    }
     const loadRoles = async () => {
       try {
         const [rRes, pRes] = await Promise.all([
-          api.request<Role[]>('/roles'),
+          api.getRoles(),
           api.request<any[]>('/permissions'),
         ]);
         setRoles(rRes.data || []);
@@ -29,7 +33,19 @@ export default function RolesSettingsPage() {
       }
     };
     loadRoles();
-  }, [api]);
+  }, [api, can]);
+
+  if (!can('roles.read')) {
+    return (
+      <Card className="text-center py-16">
+        <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+        <h3 className="text-base font-bold text-slate-800">Доступ ограничен</h3>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+          Для просмотра матрицы ролей и прав доступа требуются права администратора (roles.read).
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">

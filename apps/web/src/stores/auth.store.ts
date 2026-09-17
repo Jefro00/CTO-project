@@ -71,6 +71,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       user: null,
       organization: null,
       currentLocation: null,
+      locations: [],
       isAuthenticated: false,
       isLoading: false,
     });
@@ -79,7 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   can: (permission: string) => {
     const { user } = get();
     if (!user || !user.permissions) return false;
-    return hasPermission(user.permissions as any, permission);
+    return hasPermission(user.permissions, permission);
   },
 
   initialize: async () => {
@@ -98,22 +99,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       api.setToken(savedToken);
       const res = await api.getMe();
       if (res.data) {
-        const orgRes = await api.getOrganization().catch(() => ({ data: null }));
-        const locRes = await api.getLocations().catch(() => ({ data: [] }));
+        const u = res.data;
+        let userLocations: Location[] = u.location ? [u.location] : [];
+        let orgData: Organization | null = u.organization || null;
+
+        // Only fetch org and locations if permissions allow
+        const userPerms = u.permissions || [];
+        const canReadOrg = userPerms.includes('*') || userPerms.includes('organization.read');
+        const canReadLocs = userPerms.includes('*') || userPerms.includes('locations.read');
+
+        if (canReadOrg && !orgData) {
+          try {
+            const orgRes = await api.getOrganization();
+            orgData = orgRes.data || orgData;
+          } catch {
+            // ignore
+          }
+        }
+
+        if (canReadLocs) {
+          try {
+            const locRes = await api.getLocations();
+            if (locRes.data && locRes.data.length > 0) {
+              userLocations = locRes.data;
+            }
+          } catch {
+            // ignore
+          }
+        }
 
         set({
           token: savedToken,
-          user: res.data,
-          organization: orgRes.data || (res.data.organization as any) || null,
-          currentLocation: res.data.location || (locRes.data && locRes.data[0]) || null,
-          locations: locRes.data || [],
+          user: u,
+          organization: orgData,
+          currentLocation: u.location || (userLocations.length > 0 ? userLocations[0] : null),
+          locations: userLocations,
           isAuthenticated: true,
           isLoading: false,
         });
         return;
       }
-    } catch (e) {
-      console.warn('Session expired or API unreachable:', e);
+    } catch {
       localStorage.removeItem('aos_token');
       localStorage.removeItem('aos_user');
       api.setToken(null);

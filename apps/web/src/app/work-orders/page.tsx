@@ -15,27 +15,52 @@ import {
   FileText,
   User,
   Car,
+  UserCheck,
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { WorkOrder, WorkOrderStatus } from '@automotive-os/types';
+import { WorkOrder } from '@automotive-os/types';
 
 export default function WorkOrdersPage() {
-  const { api } = useAuthStore();
+  const { api, user, can } = useAuthStore();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const isMechanic = user?.role?.name === 'MECHANIC' || (user?.role as any) === 'MECHANIC';
+  const [statusFilter, setStatusFilter] = useState<string>(isMechanic ? 'my_assigned' : 'all');
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   const loadWorkOrders = async () => {
     setIsLoading(true);
     try {
-      const res = await api.getWorkOrders({
-        status: statusFilter === 'all' ? undefined : statusFilter,
-        search,
-      });
-      setWorkOrders(res.data || []);
+      const queryParams: any = {
+        search: search || undefined,
+      };
+
+      if (statusFilter === 'my_assigned') {
+        if (user?.id) {
+          queryParams.master_id = user.id;
+          queryParams.assigned_to = user.id;
+        }
+      } else if (statusFilter !== 'all') {
+        queryParams.status = statusFilter;
+      }
+
+      const res = await api.getWorkOrders(queryParams);
+      let orders = res.data || [];
+
+      // If in my_assigned mode and API filter returns empty or all, ensure client side filter matches user ID or role
+      if (statusFilter === 'my_assigned' && user?.id) {
+        orders = orders.filter((wo: any) =>
+          wo.master_id === user.id ||
+          wo.assigned_to === user.id ||
+          wo.master?.id === user.id ||
+          (wo.items && wo.items.some((it: any) => it.assigned_to === user.id)) ||
+          wo.status === 'in_progress'
+        );
+      }
+
+      setWorkOrders(orders);
     } catch (err) {
       console.error('Error loading work orders:', err);
     } finally {
@@ -46,10 +71,11 @@ export default function WorkOrdersPage() {
   useEffect(() => {
     const timer = setTimeout(loadWorkOrders, 200);
     return () => clearTimeout(timer);
-  }, [statusFilter, search]);
+  }, [statusFilter, search, user?.id]);
 
   const statuses = [
     { id: 'all', label: 'Все заказы' },
+    { id: 'my_assigned', label: '⚡ Мои заказы (Цех)' },
     { id: 'in_progress', label: 'В работе' },
     { id: 'waiting_approval', label: 'Согласование' },
     { id: 'approved', label: 'Согласован' },
@@ -68,12 +94,14 @@ export default function WorkOrdersPage() {
             Управление сервисными работами, запчастями, назначением механиков и актами
           </p>
         </div>
-        <Link href="/inspections/new">
-          <Button variant="primary" size="md" className="font-bold shadow-md shadow-indigo-600/20">
-            <Plus className="w-4 h-4" />
-            <span>Новый заказ (через приемку)</span>
-          </Button>
-        </Link>
+        {can('work_orders.create') && (
+          <Link href="/inspections/new">
+            <Button variant="primary" size="md" className="font-bold shadow-md shadow-indigo-600/20">
+              <Plus className="w-4 h-4" />
+              <span>Новый заказ (через приемку)</span>
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Filter and Status tabs */}
@@ -115,13 +143,17 @@ export default function WorkOrdersPage() {
           <Wrench className="w-12 h-12 text-slate-300 mx-auto mb-3" />
           <h3 className="text-base font-bold text-slate-800">Заказ-наряды не найдены</h3>
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto mb-4">
-            Создайте первый заказ-наряд через мастер приемки автомобиля
+            {statusFilter === 'my_assigned'
+              ? 'У вас пока нет назначенных заказов в цехе'
+              : 'Создайте первый заказ-наряд через мастер приемки автомобиля'}
           </p>
-          <Link href="/inspections/new">
-            <Button variant="primary" size="sm">
-              <Plus className="w-4 h-4" /> Оформить приемку и заказ
-            </Button>
-          </Link>
+          {can('work_orders.create') && (
+            <Link href="/inspections/new">
+              <Button variant="primary" size="sm">
+                <Plus className="w-4 h-4" /> Оформить приемку и заказ
+              </Button>
+            </Link>
+          )}
         </Card>
       ) : (
         <div className="space-y-3">
@@ -133,6 +165,8 @@ export default function WorkOrdersPage() {
               completed: 'emerald',
               closed: 'gray',
             };
+            const isAssignedToMe = wo.master_id === user?.id || (wo as any).master?.id === user?.id;
+
             return (
               <Link
                 key={wo.id}
@@ -145,17 +179,28 @@ export default function WorkOrdersPage() {
                       #{wo.number}
                     </span>
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                           {wo.vehicle?.make} {wo.vehicle?.model}
                         </h3>
                         <span className="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
                           {wo.vehicle?.license_plate}
                         </span>
+                        {isAssignedToMe && (
+                          <span className="text-[11px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md flex items-center gap-1">
+                            <UserCheck className="w-3 h-3" />
+                            Назначен вам
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-slate-500">
                         Владелец: {wo.customer?.first_name} {wo.customer?.last_name} ({wo.customer?.phone}) • Приемщик: {wo.advisor?.first_name} {wo.advisor?.last_name}
                       </p>
+                      {wo.master && (
+                        <p className="text-xs text-indigo-600 font-semibold mt-0.5">
+                          🔧 Механик: {wo.master.first_name} {wo.master.last_name}
+                        </p>
+                      )}
                       {wo.customer_complaint && (
                         <p className="text-xs text-slate-600 mt-1 font-medium line-clamp-1">
                           Жалоба: {wo.customer_complaint}

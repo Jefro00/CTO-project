@@ -127,6 +127,7 @@ function NewInspectionContent() {
         customer_comment: customerComment,
         internal_comment: internalComment,
         items: checklist,
+        damage_markers: damageMarkers,
       });
 
       // 2. Complete inspection

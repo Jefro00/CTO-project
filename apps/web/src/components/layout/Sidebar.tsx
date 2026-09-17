@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
@@ -17,13 +17,15 @@ import {
   Building2,
   HardDriveDownload,
   FileSpreadsheet,
+  LogOut,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuthStore } from '../../stores/auth.store';
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
-  const { user, organization, currentLocation, can } = useAuthStore();
+  const router = useRouter();
+  const { user, organization, currentLocation, can, logout } = useAuthStore();
 
   const navItems = [
     { label: 'Дашборд', href: '/dashboard', icon: LayoutDashboard },
@@ -45,6 +47,11 @@ export const Sidebar: React.FC = () => {
 
   const filteredNav = navItems.filter((i) => !i.permission || can(i.permission));
   const filteredSettings = settingsItems.filter((i) => !i.permission || can(i.permission));
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 h-screen sticky top-0 border-r border-slate-800 select-none">
@@ -132,21 +139,30 @@ export const Sidebar: React.FC = () => {
         )}
       </div>
 
-      {/* User Profile Footer */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/40">
-        <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-800/40 border border-slate-800">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 font-bold flex items-center justify-center text-xs">
-            {user?.first_name?.[0]}
-            {user?.last_name?.[0]}
+      {/* User Profile & Logout Footer (BUG-12 fix) */}
+      <div className="p-3 border-t border-slate-800 bg-slate-950/40 space-y-2">
+        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-800/40 border border-slate-800">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 font-bold flex items-center justify-center text-xs shrink-0">
+              {user?.first_name?.[0]}
+              {user?.last_name?.[0]}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-white truncate">
+                {user?.first_name} {user?.last_name}
+              </p>
+              <p className="text-[10px] text-sky-400 font-mono uppercase truncate">
+                {user?.role?.name || (user?.role as any) || 'USER'}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-white truncate">
-              {user?.first_name} {user?.last_name}
-            </p>
-            <p className="text-[10px] text-sky-400 font-mono uppercase truncate">
-              {user?.role?.name || 'USER'}
-            </p>
-          </div>
+          <button
+            onClick={handleLogout}
+            title="Выйти из системы"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </aside>

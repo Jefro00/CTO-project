@@ -20,7 +20,7 @@ import { Input } from '../../components/ui/Input';
 import { Customer } from '@automotive-os/types';
 
 export default function CustomersPage() {
-  const { api } = useAuthStore();
+  const { api, can } = useAuthStore();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -75,15 +75,17 @@ export default function CustomersPage() {
             Учет автовладельцев, контактных данных и привязанных транспортных средств
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="md"
-          className="font-bold shadow-md shadow-indigo-600/20"
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          <Plus className="w-4 h-4" />
-          <span>Добавить клиента</span>
-        </Button>
+        {can('customers.create') && (
+          <Button
+            variant="primary"
+            size="md"
+            className="font-bold shadow-md shadow-indigo-600/20"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+            <span>Добавить клиента</span>
+          </Button>
+        )}
       </div>
 
       <Card className="p-3">

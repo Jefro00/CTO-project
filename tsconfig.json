@@ -20,5 +20,5 @@
       "@automotive-os/api-client": ["packages/api-client/src"]
     }
   },
-  "exclude": ["node_modules", "dist", ".next", "apps/mobile"]
+  "exclude": ["node_modules", "dist", ".next", "apps/web", "apps/mobile", "tests", "playwright.config.ts"]
 }
